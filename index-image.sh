@@ -21,14 +21,18 @@ if [ -z "$schema" ]; then
     echo "Invalid arguments." >&2
     exit 2
 fi
-if [ "s$schema" != "s1" ]; then
+if [ "s$schema" != "s1" ] && [ "s$schema" != "s2" ]; then
     echo "Schema '$schema' not supported." >&2
     exit 3
 fi
 
 # a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4 is the 0-byte layer of only metadata, no need to look at it
 
-layers=$(curl "https://$registry/v2/$team/$artifact/manifests/$version" | jq -r '.fsLayers[].blobSum' | grep -v 'a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4' | tac)
+if [ "s$schema" = "s1" ]; then
+    layers=$(curl "https://$registry/v2/$team/$artifact/manifests/$version" | jq -r '.fsLayers[].blobSum' | grep -v 'a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4' | tac)
+else
+    layers=$(curl "https://$registry/v2/$team/$artifact/manifests/$version" | jq -r '.layers[].digest' | grep -v 'a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4')
+fi
 parent=
 for layer in $layers; do
     echo -n "Sending layer '$layer' with parent '$parent' to Clair...   "
