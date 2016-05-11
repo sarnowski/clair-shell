@@ -21,17 +21,25 @@ if [ -z "$schema" ]; then
     echo "Invalid arguments." >&2
     exit 2
 fi
-if [ "s$schema" != "s1" ]; then
+if [ "s$schema" != "s1" ] && [ "s$schema" != "s2" ]; then
     echo "Schema '$schema' not supported." >&2
     exit 3
 fi
 
 # a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4 is the 0-byte layer of only metadata, no need to look at it
 
-top_layer=$(curl "https://$registry/v2/$team/$artifact/manifests/$version" | jq -r '.fsLayers[].blobSum' | grep -v 'a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4' | head -n 1)
+# try v1
+top_layer=$(curl "https://$registry/v2/$team/$artifact/manifests/$version" | jq -r '.fsLayers[].blobSum' 2>/dev/null | grep -v 'a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4' | head -n 1)
+# try v2
+[ -z "$top_layer" ] && top_layer=$(curl "https://$registry/v2/$team/$artifact/manifests/$version" | jq -r '.layers[].digest' 2>/dev/null | grep -v 'a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4' | tail -n 1)
 
-curl "$clair_url/v1/layers/$top_layer?vulnerabilities" | jq -c '.Layer.Features[]' | while read feature; do
-    echo $feature | jq -c '.Vulnerabilities[]?' | while read vulnerability; do
+if [ -z "$top_layer" ]; then
+    echo "cannot determine top layer" >&2
+    exit 4
+fi
+
+curl "$clair_url/v1/layers/$top_layer?vulnerabilities" | jq -ca '.Layer.Features[]?' | while read feature; do
+    echo "$feature" | jq -ca '.Vulnerabilities?[]?' | while read vulnerability; do
         name=$(echo $feature | jq -r '.Name')
         version=$(echo $feature | jq -r '.Version')
         cve=$(echo $vulnerability | jq -r '.Name')
@@ -56,7 +64,6 @@ curl "$clair_url/v1/layers/$top_layer?vulnerabilities" | jq -c '.Layer.Features[
             color="30"
         fi
 
-        
         echo "\033[${text};${color}m[$severity] $name $version: $fixed  ($cve, $link)\033[0;0m"
     done
 done

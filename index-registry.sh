@@ -13,7 +13,7 @@ auth=$3
 
 alias curl="curl -s $auth"
 
-curl https://$registry/v2/_catalog | jq -r '.repositories[]' | while read name; do
+curl https://$registry/v2/_catalog | jq -r '.repositories[]' | sort | uniq | while read name; do
     team=$(echo $name | cut -d'/' -f1)
     artifact=$(echo $name | cut -d'/' -f2)
 
