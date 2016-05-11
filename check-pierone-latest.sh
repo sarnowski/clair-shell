@@ -19,8 +19,6 @@ curl https://$registry/v2/_catalog | jq -r '.repositories[]' | sort | uniq | whi
 
     version=$(pierone latest --url https://$registry $team $artifact)
 
-    echo -n "$team/$artifact ($version):  "
-
     # a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4 is the 0-byte layer of only metadata, no need to look at it
 
     # try v1
@@ -30,14 +28,14 @@ curl https://$registry/v2/_catalog | jq -r '.repositories[]' | sort | uniq | whi
 
     if [ -z "$top_layer" ]; then
         # this is too old and doesn't even provide the "new" Docker manifests; assume that this is vulnerable if its that old
-        echo "VULNERABLE*"
+        echo "VULNERABLE*  $team/$artifact ($version)"
         continue
     fi
 
     fixes=$(curl "$clair_url/v1/layers/$top_layer?vulnerabilities" | jq -c '.Layer.Features[]?.Vulnerabilities[]?.FixedBy?' | grep -v "null")
     if [ -z "$fixes" ]; then
-        echo "ok"
+        echo "OK           $team/$artifact ($version)"
     else
-        echo "VULNERABLE"
+        echo "VULNERABLE   $team/$artifact ($version)"
     fi
 done

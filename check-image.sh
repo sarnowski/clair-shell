@@ -55,13 +55,9 @@ curl "$clair_url/v1/layers/$top_layer?vulnerabilities" | jq -ca '.Layer.Features
         fi
 
         severity=$(echo $vulnerability | jq -r '.Severity')
-        color="0"
+        color=30
         if [ "$severity" = "High" ]; then
             color="31"
-        elif [ "$severity" = "Medium" ]; then
-            color="33"
-        elif [ "$severity" = "Low" ]; then
-            color="30"
         fi
 
         echo "\033[${text};${color}m[$severity] $name $version: $fixed  ($cve, $link)\033[0;0m"
