@@ -56,7 +56,7 @@ curl "$clair_url/v1/layers/$top_layer?vulnerabilities" | jq -ca '.Layer.Features
 
         severity=$(echo $vulnerability | jq -r '.Severity')
         color=30
-        if [ "$severity" = "High" ]; then
+        if [ "$severity" = "High" ] || [ "$severity" = "Critical" ]; then
             color="31"
         fi
 
